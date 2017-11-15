@@ -1,7 +1,7 @@
 # Contrastive PCA for a given alpha
 # X, Y: datasets (rows = sample units, cols = variables)
 # alpha: hyper-parameter, controls the contrastiveness
-# k: number of desired (reduced) dimensions
+# k: number of desired (reduced) dimensions (components)
 cPCA_alpha <- function(X, Y, alpha, k)
   eigen(cor(X) - alpha * cor(Y))$vectors[,1:k]
 
@@ -15,24 +15,28 @@ PABS <- function(U, V) {
   svd(ips)$d
 }
 
-# fully-connected spectral clustering
-# TODO: include normalized version
-spectral_clustering <- function(D, p, normalized=FALSE) {
-  if(p >= nrow(D)) stop('p must be < dimension of D')
-  kmeans(eigen(diag(rowSums(D)) - D)$vectors[,1:p], p)$cluster
+# spectral clustering algorithm from A. Y. Ng et al (2002)
+spectral_clustering <- function(A, p) {
+  if(p >= nrow(A)) stop('p must be < dimension of A')
+  D_inv_sqrt <- diag(1/sqrt(rowSums(A)))
+  L <- D_inv_sqrt %*% A %*% D_inv_sqrt
+  kmeans(eigen(L)$vectors[,1:p], p)$cluster
 }
 
 logspace <- function(from, to, n) exp(seq(log(from), log(to), len=n))
 
 # cPCA
-cPCA <- function(X, Y, alphas=logspace(0.1, 1000, 40), k=2, p=4) {
+cPCA <- function(X, Y, p, alphas=logspace(0.1, 1000, 40), k=2) {
   V <- vector('list', length(alphas))
   for(i in seq_along(alphas)) V[[i]] <- cPCA_alpha(X, Y, alphas[i], k)
   D <- matrix(0, length(alphas), length(alphas))
   for(i in seq_along(alphas)) {
     D[i,i] <- 0
     if(i < length(alphas)) {
-      for(j in (i+1):length(alphas)) D[i,j] <- D[j,i] <- prod(PABS(V[[i]], V[[j]]))
+      for(j in (i+1):length(alphas)) {
+        thetas <- PABS(V[[i]], V[[j]])
+        D[i,j] <- D[j,i] <- prod(cos(thetas))
+      }
     }
   }
   clusters <- spectral_clustering(D, p)
