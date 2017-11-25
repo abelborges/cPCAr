@@ -3,7 +3,7 @@
 # alpha: hyper-parameter, controls the contrastiveness
 # k: number of desired (reduced) dimensions (components)
 cPCA_alpha <- function(X, Y, alpha, k)
-  eigen(cor(X) - alpha * cor(Y))$vectors[,1:k]
+  eigen(cov(X) - alpha * cov(Y))$vectors[,1:k]
 
 # principal angles between subspaces
 PABS <- function(U, V) {
@@ -23,10 +23,10 @@ spectral_clustering <- function(A, p) {
   kmeans(eigen(L)$vectors[,1:p], p)$cluster
 }
 
-logspace <- function(from, to, n) exp(seq(log(from), log(to), len=n))
+logspace <- function(from, to, n) exp(seq(log(from), log(to), len = n))
 
 # cPCA
-cPCA <- function(X, Y, p, alphas=logspace(0.1, 1000, 40), k=2) {
+cPCA <- function(X, Y, p = 4, alphas = logspace(0.1, 1000, 40), k = 2) {
   V <- vector('list', length(alphas))
   for(i in seq_along(alphas)) V[[i]] <- cPCA_alpha(X, Y, alphas[i], k)
   D <- matrix(0, length(alphas), length(alphas))
